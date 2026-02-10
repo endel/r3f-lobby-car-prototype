@@ -1,26 +1,20 @@
 import { Environment, Gltf, Lightformer } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
-import { Joystick, onPlayerJoin } from "playroomkit";
-import { useEffect, useState } from "react";
+import { useRoomState } from "@colyseus/react";
+import { useColyseus } from "../hooks/useColyseus";
+import { useMemo } from "react";
 import { CarController } from "./CarController";
 import { GameArea } from "./GameArea";
 
 export const Game = () => {
-  const [players, setPlayers] = useState([]);
+  const { room } = useColyseus();
+  const playersMap = useRoomState(room, (s) => s?.players);
 
-  useEffect(() => {
-    onPlayerJoin((state) => {
-      const controls = new Joystick(state, {
-        type: "angular",
-        buttons: [{ id: "Respawn", label: "Spawn" }],
-      });
-      const newPlayer = { state, controls };
-      setPlayers((players) => [...players, newPlayer]);
-      state.onQuit(() => {
-        setPlayers((players) => players.filter((p) => p.state.id !== state.id));
-      });
-    });
-  }, []);
+  // Convert MapSchema to array
+  const players = useMemo(() => {
+    if (!playersMap) return [];
+    return [...playersMap.values()];
+  }, [playersMap]);
 
   return (
     <group>
@@ -28,11 +22,11 @@ export const Game = () => {
       <Environment>
         <Lightformer
           position={[5, 5, 5]}
-          form="rect" // circle | ring | rect (optional, default = rect)
-          intensity={1} // power level (optional = 1)
-          color="white" // (optional = white)
-          scale={[10, 10]} // Scale it any way you prefer (optional = [1, 1])
-          target={[0, 0, 0]} // Target position (optional = undefined)
+          form="rect"
+          intensity={1}
+          color="white"
+          scale={[10, 10]}
+          target={[0, 0, 0]}
         />
       </Environment>
       <pointLight position={[0, 5, 0]} intensity={2.5} distance={10} />
@@ -50,8 +44,8 @@ export const Game = () => {
       />
       <directionalLight position={[10, 10, 10]} intensity={0.4} />
       <Physics>
-        {players.map(({ state, controls }) => (
-          <CarController key={state.id} state={state} controls={controls} />
+        {players.map((player) => (
+          <CarController key={player.sessionId} player={player} />
         ))}
         <RigidBody type="fixed" colliders="hull" rotation-y={Math.PI}>
           <GameArea />

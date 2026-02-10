@@ -2,13 +2,13 @@ import { Html, PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, euler, quat, vec3 } from "@react-three/rapier";
 import { useControls } from "leva";
-import { isHost, myPlayer, usePlayerState } from "playroomkit";
+import { useRoomState } from "@colyseus/react";
+import { useColyseus } from "../hooks/useColyseus";
+import { useInput } from "../hooks/useInput";
 import { useEffect, useRef } from "react";
 import { Vector3 } from "three";
 import { randInt } from "three/src/math/MathUtils";
 import { Car } from "./Car";
-
-const UP = new Vector3(0, 1, 0);
 
 const CAR_SPEEDS = {
   sedanSports: 4,
@@ -20,9 +20,18 @@ const CAR_SPEEDS = {
   firetruck: 10,
 };
 
-export const CarController = ({ state, controls }) => {
+export const CarController = ({ player }) => {
   const rb = useRef();
-  const me = myPlayer();
+  const { room, updatePosition, sendInput } = useColyseus();
+  const hostId = useRoomState(room, (s) => s?.hostId);
+  
+  const mySessionId = room.sessionId;
+  const isMe = player.sessionId === mySessionId;
+  const isHost = hostId === mySessionId;
+  
+  // Get input for this player
+  const localInput = useInput(isMe);
+  
   const { rotationSpeed, carSpeed } = useControls({
     carSpeed: {
       value: 3,
@@ -39,83 +48,128 @@ export const CarController = ({ state, controls }) => {
   });
 
   const lookAt = useRef(new Vector3(0, 0, 0));
+  const lastInputSent = useRef({ pressed: false, angle: 0, respawn: false });
+  
   useFrame(({ camera }, delta) => {
     if (!rb.current) {
       return;
     }
-    if (me?.id === state.id) {
+    
+    // Camera follow for own player
+    if (isMe) {
       const targetLookAt = vec3(rb.current.translation());
       lookAt.current.lerp(targetLookAt, 0.1);
       camera.lookAt(lookAt.current);
     }
-    const rotVel = rb.current.angvel();
-    if (controls.isJoystickPressed()) {
-      const angle = controls.angle();
-      const dir = angle > Math.PI / 2 ? 1 : -1;
-      rotVel.y = -dir * Math.sin(angle) * rotationSpeed;
-      // console.log(radToDeg(angle));
-      const impulse = vec3({
-        x: 0,
-        y: 0,
-        z: (CAR_SPEEDS[carModel] || carSpeed) * delta * dir,
-      });
-      const eulerRot = euler().setFromQuaternion(quat(rb.current.rotation()));
-      impulse.applyEuler(eulerRot);
-      rb.current.applyImpulse(impulse, true);
-    }
-    rb.current.setAngvel(rotVel, true);
-    if (isHost()) {
-      state.setState("pos", rb.current.translation());
-      state.setState("rot", rb.current.rotation());
-    } else {
-      const pos = state.getState("pos");
-      if (pos) {
-        rb.current.setTranslation(pos);
-        rb.current.setRotation(state.getState("rot"));
+    
+    // Determine input source
+    // If this is my player, use local input
+    // If this is another player, use their synced input from state
+    const joystickPressed = isMe ? localInput.pressed : player.joystickPressed;
+    const joystickAngle = isMe ? localInput.angle : player.joystickAngle;
+    const respawnPressed = isMe ? localInput.respawn : player.respawnPressed;
+    
+    // Send input to server if this is my player and input changed
+    if (isMe) {
+      const inputChanged = 
+        lastInputSent.current.pressed !== localInput.pressed ||
+        lastInputSent.current.angle !== localInput.angle ||
+        lastInputSent.current.respawn !== localInput.respawn;
+      
+      if (inputChanged) {
+        sendInput({
+          pressed: localInput.pressed,
+          angle: localInput.angle,
+          respawn: localInput.respawn,
+        });
+        lastInputSent.current = { ...localInput };
       }
     }
-    if (controls.isPressed("Respawn")) {
+    
+    const rotVel = rb.current.angvel();
+    
+    // Apply physics (host calculates for all, or each client for themselves)
+    if (isHost || isMe) {
+      if (joystickPressed) {
+        const angle = joystickAngle;
+        const dir = angle > Math.PI / 2 ? 1 : -1;
+        rotVel.y = -dir * Math.sin(angle) * rotationSpeed;
+        
+        const impulse = vec3({
+          x: 0,
+          y: 0,
+          z: (CAR_SPEEDS[player.car] || carSpeed) * delta * dir,
+        });
+        const eulerRot = euler().setFromQuaternion(quat(rb.current.rotation()));
+        impulse.applyEuler(eulerRot);
+        rb.current.applyImpulse(impulse, true);
+      }
+      rb.current.setAngvel(rotVel, true);
+    }
+    
+    // Position sync
+    if (isHost) {
+      // Host syncs all player positions to server
+      const pos = rb.current.translation();
+      const rot = rb.current.rotation();
+      updatePosition(player.sessionId, pos, rot);
+    } else if (!isMe) {
+      // Non-host clients apply synced positions for other players
+      rb.current.setTranslation({ x: player.x, y: player.y, z: player.z });
+      rb.current.setRotation({ x: player.rotX, y: player.rotY, z: player.rotZ, w: player.rotW });
+    }
+    
+    // Handle respawn
+    if (respawnPressed && isHost) {
       respawn();
     }
   });
+  
   const respawn = () => {
-    if (isHost()) {
-      rb.current.setTranslation({
-        x: randInt(-2, 2) * 4,
-        y: 2,
-        z: randInt(-2, 2) * 4,
-      });
-      rb.current.setLinvel({ x: 0, y: 0, z: 0 });
-      rb.current.setRotation({ x: 0, y: 0, z: 0, w: 1 });
-      rb.current.setAngvel({ x: 0, y: 0, z: 0 });
-    }
+    rb.current.setTranslation({
+      x: randInt(-2, 2) * 4,
+      y: 2,
+      z: randInt(-2, 2) * 4,
+    });
+    rb.current.setLinvel({ x: 0, y: 0, z: 0 });
+    rb.current.setRotation({ x: 0, y: 0, z: 0, w: 1 });
+    rb.current.setAngvel({ x: 0, y: 0, z: 0 });
   };
-  const [carModel] = usePlayerState(state, "car"); // show by default with state.getState("car") and non refresh
+  
+  // Initial spawn
   useEffect(() => {
-    respawn();
-  }, []);
+    if (isHost && rb.current) {
+      respawn();
+    }
+  }, [isHost]);
+  
+  // Get initial position from state
+  const initialPos = { x: player.x, y: player.y, z: player.z };
+  const initialRot = { x: player.rotX, y: player.rotY, z: player.rotZ, w: player.rotW };
+  
   return (
     <group>
-      {/* <OrbitControls /> */}
       <RigidBody
         ref={rb}
         colliders={"hull"}
-        key={carModel}
-        position={vec3(state.getState("pos"))}
-        rotation={euler().setFromQuaternion(quat(state.getState("rot")))}
+        key={player.car}
+        position={[initialPos.x, initialPos.y, initialPos.z]}
+        rotation={euler().setFromQuaternion(quat(initialRot))}
         onIntersectionEnter={(e) => {
-          if (e.other.rigidBodyObject.name === "void") {
-            respawn();
+          if (e.other.rigidBodyObject?.name === "void") {
+            if (isHost) {
+              respawn();
+            }
           }
         }}
       >
         <Html position-y={0.55}>
-          <h1 className="text-center whitespace-nowrap text-white drop-shadow-md  backdrop-filter bg-slate-300 bg-opacity-30 backdrop-blur-lg rounded-md py-2 px-4 text-xl  transform -translate-x-1/2">
-            {state.state.name || state.state.profile.name}
+          <h1 className="text-center whitespace-nowrap text-white drop-shadow-md backdrop-filter bg-slate-300 bg-opacity-30 backdrop-blur-lg rounded-md py-2 px-4 text-xl transform -translate-x-1/2">
+            {player.name || "Player"}
           </h1>
         </Html>
-        <Car model={carModel} scale={0.32} />
-        {me?.id === state.id && (
+        <Car model={player.car} scale={0.32} />
+        {isMe && (
           <PerspectiveCamera makeDefault position={[0, 1.5, -3]} near={1} />
         )}
       </RigidBody>

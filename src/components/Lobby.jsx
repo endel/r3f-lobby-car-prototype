@@ -9,21 +9,26 @@ import {
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useAtom } from "jotai";
-import { myPlayer, usePlayersList } from "playroomkit";
+import { useRoomState } from "@colyseus/react";
+import { useColyseus } from "../hooks/useColyseus";
 import { useEffect, useRef, useState } from "react";
 import { MathUtils, Vector3 } from "three";
 import { degToRad } from "three/src/math/MathUtils";
 import { audios, playAudio } from "../utils/AudioManager";
 import { Car } from "./Car";
 import { NameEditingAtom } from "./UI";
+
 const CAR_SPACING = 2.5;
+
 export const Lobby = () => {
   const [nameEditing, setNameEditing] = useAtom(NameEditingAtom);
   const controls = useRef();
   const cameraReference = useRef();
-  const me = myPlayer();
-  const players = usePlayersList(true);
-  players.sort((a, b) => a.id.localeCompare(b.id));
+
+  const { room, roomRef } = useColyseus();
+
+  const players = useRoomState(roomRef.current, (s) => s.players);
+  const mySessionId = room.sessionId;
 
   const { scene } = useGLTF("/models/garage.glb");
   useEffect(() => {
@@ -69,7 +74,7 @@ export const Lobby = () => {
 
   useEffect(() => {
     adjustCamera();
-  }, [players]);
+  }, [players.size]);
 
   useEffect(() => {
     const onResize = () => {
@@ -137,17 +142,17 @@ export const Lobby = () => {
             <meshBasicMaterial color="white" />
           </Box>
         </group>
-        {players.map((player, idx) => (
+        {Array.from(players.values()).map((player, idx) => (
           <group
             position-x={
-              idx * CAR_SPACING - ((players.length - 1) * CAR_SPACING) / 2
+              idx * CAR_SPACING - ((players.size - 1) * CAR_SPACING) / 2
             }
-            key={player.id}
+            key={player.sessionId}
             scale={0.8}
           >
             <Billboard position-y={2.1} position-x={0.5}>
               <Text fontSize={0.34} anchorX={"right"}>
-                {player.state.name || player.state.profile.name}
+                {player.name || "Player"}
                 <meshBasicMaterial color="white" />
               </Text>
               <Text
@@ -157,10 +162,10 @@ export const Lobby = () => {
                 position-y={-0.02}
                 position-z={-0.01}
               >
-                {player.state.name || player.state.profile.name}
+                {player.name || "Player"}
                 <meshBasicMaterial color="black" transparent opacity={0.8} />
               </Text>
-              {player.id === me?.id && (
+              {player.sessionId === mySessionId && (
                 <>
                   <Image
                     onClick={() => setNameEditing(true)}
@@ -181,11 +186,11 @@ export const Lobby = () => {
                 </>
               )}
             </Billboard>
-            <group position-y={player.id === me?.id ? 0.15 : 0}>
+            <group position-y={player.sessionId === mySessionId ? 0.15 : 0}>
               <CarSwitcher player={player} />
             </group>
 
-            {player.id === me?.id && (
+            {player.sessionId === mySessionId && (
               <>
                 <pointLight
                   position-x={1}
@@ -222,7 +227,8 @@ const SWITCH_DURATION = 600;
 const CarSwitcher = ({ player }) => {
   const changedCarAt = useRef(0);
   const container = useRef();
-  const [carModel, setCurrentCarModel] = useState(player.getState("car"));
+  const [carModel, setCurrentCarModel] = useState(player.car);
+  
   useFrame(() => {
     const timeSinceChange = Date.now() - changedCarAt.current;
     if (timeSinceChange < SWITCH_DURATION / 2) {
@@ -251,7 +257,9 @@ const CarSwitcher = ({ player }) => {
       );
     }
   }, []);
-  const newCar = player.getState("car");
+  
+  // Check if car changed
+  const newCar = player.car;
   if (newCar !== carModel) {
     playAudio(audios.car_start);
     changedCarAt.current = Date.now();
@@ -259,6 +267,7 @@ const CarSwitcher = ({ player }) => {
       setCurrentCarModel(newCar);
     }, SWITCH_DURATION / 2);
   }
+  
   return (
     <group ref={container}>
       <Car model={carModel} />

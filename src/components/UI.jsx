@@ -1,26 +1,35 @@
 import { atom, useAtom } from "jotai";
-import {
-  isHost,
-  myPlayer,
-  startMatchmaking,
-  useMultiplayerState,
-  usePlayersList,
-} from "playroomkit";
+import { useRoomState } from "@colyseus/react";
+import { useColyseus } from "../hooks/useColyseus";
 import { useEffect, useState } from "react";
 import { CAR_MODELS } from "./Car";
 
 export const NameEditingAtom = atom(false);
 
 export const UI = () => {
-  const me = myPlayer();
-  const [gameState, setGameState] = useMultiplayerState("gameState", "lobby");
+  const { room, setGameState, setCar, setName } = useColyseus();
+  
+  // Get state using useRoomState selectors
+  const gameState = useRoomState(room, (s) => s?.gameState) || "lobby";
+  const hostId = useRoomState(room, (s) => s?.hostId);
+  const myPlayer = useRoomState(room, (s) => s?.players?.get(room.sessionId));
+
+  const isHost = hostId === room.sessionId;
+
+  console.log("MY PLAYER:", myPlayer);
+
   const [loadingSlide, setLoadingSlide] = useState(true);
   const [nameEditing, setNameEditing] = useAtom(NameEditingAtom);
-  const [nameInput, setNameInput] = useState(
-    me?.getState("name") || me?.state.profile.name
-  );
+  const [nameInput, setNameInput] = useState(myPlayer?.name || "");
 
   const [invited, setInvited] = useState(false);
+
+  // Update nameInput when myPlayer changes
+  useEffect(() => {
+    if (myPlayer?.name) {
+      setNameInput(myPlayer.name);
+    }
+  }, [myPlayer?.name]);
 
   const invite = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -38,8 +47,6 @@ export const UI = () => {
     }
   }, [gameState]);
 
-  usePlayersList(true);
-
   const [loadingContent, setLoadingContent] = useState(0);
   useEffect(() => {
     if (loadingSlide) {
@@ -49,6 +56,8 @@ export const UI = () => {
       return () => clearInterval(interval);
     }
   }, [loadingSlide]);
+
+  const currentCar = myPlayer?.car || CAR_MODELS[0];
 
   return (
     <>
@@ -70,13 +79,13 @@ export const UI = () => {
             key={model}
             className={`min-w-14 min-h-14 w-14 h-14 bg-white bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-full shadow-md cursor-pointer
             ${
-              me?.getState("car") === model ||
-              (!me?.getState("car") && idx === 0)
+              currentCar === model ||
+              (!currentCar && idx === 0)
                 ? "ring-4 ring-blue-500"
                 : ""
             }
             `}
-            onClick={() => me?.setState("car", model)}
+            onClick={() => setCar(model)}
           >
             <img
               src={`/images/cars/${model}.png`}
@@ -86,7 +95,7 @@ export const UI = () => {
           </div>
         ))}
       </div>
-      {gameState === "lobby" && isHost() && (
+      {gameState === "lobby" && isHost && (
         <div className="fixed bottom-4 right-4 z-10 flex flex-col gap-2 items-end">
           <button
             className="px-4 py-2 bg-gray-100 text-black text-lg rounded-md"
@@ -97,17 +106,7 @@ export const UI = () => {
               }, 500);
             }}
           >
-            Private
-          </button>
-          <button
-            className="px-8 py-2 bg-gray-100 text-black text-2xl rounded-md"
-            onClick={async () => {
-              setGameState("loading");
-              await startMatchmaking();
-              setGameState("game");
-            }}
-          >
-            Online
+            Start Game
           </button>
         </div>
       )}
@@ -163,7 +162,7 @@ export const UI = () => {
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                me?.setState("name", nameInput);
+                setName(nameInput);
                 setNameEditing(false);
               }
             }}
@@ -180,7 +179,7 @@ export const UI = () => {
             <button
               className="px-8 py-2 bg-green-400 text-white text-2xl rounded-md"
               onClick={() => {
-                me?.setState("name", nameInput);
+                setName(nameInput);
                 setNameEditing(false);
               }}
             >
