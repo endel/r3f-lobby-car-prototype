@@ -25,9 +25,11 @@ export const Lobby = () => {
   const controls = useRef();
   const cameraReference = useRef();
 
-  const { room, roomRef } = useColyseus();
+  const { room } = useColyseus();
 
-  const players = useRoomState(roomRef.current, (s) => s.players);
+  const players = useRoomState(room, (s) => s.players);
+  const numPlayers = Object.keys(players).length;
+
   const mySessionId = room.sessionId;
 
   const { scene } = useGLTF("/models/garage.glb");
@@ -74,7 +76,7 @@ export const Lobby = () => {
 
   useEffect(() => {
     adjustCamera();
-  }, [players.size]);
+  }, [players]);
 
   useEffect(() => {
     const onResize = () => {
@@ -142,10 +144,10 @@ export const Lobby = () => {
             <meshBasicMaterial color="white" />
           </Box>
         </group>
-        {Array.from(players.values()).map((player, idx) => (
+        {Object.values(players).map((player, idx) => (
           <group
             position-x={
-              idx * CAR_SPACING - ((players.size - 1) * CAR_SPACING) / 2
+              idx * CAR_SPACING - ((numPlayers - 1) * CAR_SPACING) / 2
             }
             key={player.sessionId}
             scale={0.8}

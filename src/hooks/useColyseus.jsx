@@ -112,7 +112,6 @@ export function ColyseusProvider({ children }) {
   const value = {
     client,
     room: roomRef.current,
-    roomRef,
     error,
     connecting,
     setGameState,

@@ -2,19 +2,12 @@ import { Environment, Gltf, Lightformer } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
 import { useRoomState } from "@colyseus/react";
 import { useColyseus } from "../hooks/useColyseus";
-import { useMemo } from "react";
 import { CarController } from "./CarController";
 import { GameArea } from "./GameArea";
 
 export const Game = () => {
   const { room } = useColyseus();
-  const playersMap = useRoomState(room, (s) => s?.players);
-
-  // Convert MapSchema to array
-  const players = useMemo(() => {
-    if (!playersMap) return [];
-    return [...playersMap.values()];
-  }, [playersMap]);
+  const players = useRoomState(room, (s) => s?.players);
 
   return (
     <group>
@@ -44,7 +37,7 @@ export const Game = () => {
       />
       <directionalLight position={[10, 10, 10]} intensity={0.4} />
       <Physics>
-        {players.map((player) => (
+        {Object.values(players).map((player) => (
           <CarController key={player.sessionId} player={player} />
         ))}
         <RigidBody type="fixed" colliders="hull" rotation-y={Math.PI}>
