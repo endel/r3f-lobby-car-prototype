@@ -1,11 +1,9 @@
-import { useRoomState } from "@colyseus/react";
-import { useColyseus } from "../hooks/useColyseus";
+import { useRoomState } from "../colyseus";
 import { Game } from "./Game";
 import { Lobby } from "./Lobby";
 
 export const Experience = () => {
-  const { room } = useColyseus();
-  const gameState = useRoomState(room, (s) => s?.gameState);
+  const gameState = useRoomState((s) => s?.gameState);
 
   return (
     <>

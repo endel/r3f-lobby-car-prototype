@@ -1,18 +1,17 @@
 import { atom, useAtom } from "jotai";
-import { useRoomState } from "@colyseus/react";
-import { useColyseus } from "../hooks/useColyseus";
+import { useRoom, useRoomState, useGameActions } from "../colyseus";
 import { useEffect, useState } from "react";
 import { CAR_MODELS } from "./Car";
 
 export const NameEditingAtom = atom(false);
 
 export const UI = () => {
-  const { room, setGameState, setCar, setName } = useColyseus();
-  
-  // Get state using useRoomState selectors
-  const gameState = useRoomState(room, (s) => s?.gameState) || "lobby";
-  const hostId = useRoomState(room, (s) => s?.hostId);
-  const myPlayer = useRoomState(room, (s) => s?.players?.get(room.sessionId));
+  const { room } = useRoom();
+  const { setGameState, setCar, setName } = useGameActions();
+
+  const gameState = useRoomState((s) => s?.gameState) || "lobby";
+  const hostId = useRoomState((s) => s?.hostId);
+  const myPlayer = useRoomState((s) => s?.players?.get(room.sessionId));
 
   const isHost = hostId === room.sessionId;
 

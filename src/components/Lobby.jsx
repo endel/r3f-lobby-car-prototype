@@ -9,8 +9,7 @@ import {
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useAtom } from "jotai";
-import { useRoomState } from "@colyseus/react";
-import { useColyseus } from "../hooks/useColyseus";
+import { useRoom, useRoomState } from "../colyseus";
 import { useEffect, useRef, useState } from "react";
 import { MathUtils, Vector3 } from "three";
 import { degToRad } from "three/src/math/MathUtils";
@@ -25,9 +24,9 @@ export const Lobby = () => {
   const controls = useRef();
   const cameraReference = useRef();
 
-  const { room } = useColyseus();
+  const { room } = useRoom();
 
-  const players = useRoomState(room, (s) => s.players);
+  const players = useRoomState((s) => s.players);
   const numPlayers = Object.keys(players).length;
 
   const mySessionId = room.sessionId;

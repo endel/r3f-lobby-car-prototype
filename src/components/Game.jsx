@@ -1,13 +1,11 @@
 import { Environment, Gltf, Lightformer } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
-import { useRoomState } from "@colyseus/react";
-import { useColyseus } from "../hooks/useColyseus";
+import { useRoomState } from "../colyseus";
 import { CarController } from "./CarController";
 import { GameArea } from "./GameArea";
 
 export const Game = () => {
-  const { room } = useColyseus();
-  const players = useRoomState(room, (s) => s?.players);
+  const players = useRoomState((s) => s?.players);
 
   return (
     <group>

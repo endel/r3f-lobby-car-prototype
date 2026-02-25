@@ -1,31 +1,30 @@
 import { Canvas } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { Leva } from "leva";
-import { useRoomState } from "@colyseus/react";
 import { Experience } from "./components/Experience";
 import { UI } from "./components/UI";
-import { useColyseus } from "./hooks/useColyseus";
+import { useRoom, useRoomState } from "./colyseus";
 import { VirtualJoystick, RespawnButton } from "./hooks/useInput";
 import { useCallback, useState } from "react";
 
 // NOTE: This component expects `room` to always be available.
 // The parent AppLoader in main.jsx ensures this by only rendering App after connection.
 function App() {
-  const { room, sendInput } = useColyseus();
+  const { room } = useRoom();
   const [touchInput, setTouchInput] = useState({ pressed: false, angle: 0, respawn: false });
-  const gameState = useRoomState(room, (s) => s?.gameState);
+  const gameState = useRoomState((s) => s?.gameState);
 
   const handleJoystickInput = useCallback((input) => {
     setTouchInput(input);
-    sendInput(input);
-  }, [sendInput]);
+    room.send("input", input);
+  }, [room]);
 
   const handleRespawn = useCallback(() => {
-    sendInput({ pressed: touchInput.pressed, angle: touchInput.angle, respawn: true });
+    room.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: true });
     setTimeout(() => {
-      sendInput({ pressed: touchInput.pressed, angle: touchInput.angle, respawn: false });
+      room.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: false });
     }, 100);
-  }, [sendInput, touchInput]);
+  }, [room, touchInput]);
 
   // Check if touch device
   const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);

@@ -2,10 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { ColyseusProvider, useColyseus } from "./hooks/useColyseus";
+import { client, RoomProvider, useRoom } from "./colyseus";
 
 function AppLoader() {
-  const { room, connecting, error } = useColyseus();
+  const { room, isConnecting: connecting, error } = useRoom();
 
   if (connecting) {
     return (
@@ -37,8 +37,8 @@ function AppLoader() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ColyseusProvider>
+    <RoomProvider connect={() => client.joinOrCreate("game_room")}>
       <AppLoader />
-    </ColyseusProvider>
+    </RoomProvider>
   </React.StrictMode>
 );

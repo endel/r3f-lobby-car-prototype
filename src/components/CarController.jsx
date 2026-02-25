@@ -2,8 +2,7 @@ import { Html, PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, euler, quat, vec3 } from "@react-three/rapier";
 import { useControls } from "leva";
-import { useRoomState } from "@colyseus/react";
-import { useColyseus } from "../hooks/useColyseus";
+import { useRoom, useRoomState, useGameActions } from "../colyseus";
 import { useInput } from "../hooks/useInput";
 import { useEffect, useRef } from "react";
 import { Vector3 } from "three";
@@ -22,8 +21,9 @@ const CAR_SPEEDS = {
 
 export const CarController = ({ player }) => {
   const rb = useRef();
-  const { room, updatePosition, sendInput } = useColyseus();
-  const hostId = useRoomState(room, (s) => s?.hostId);
+  const { room } = useRoom();
+  const { updatePosition, sendInput } = useGameActions();
+  const hostId = useRoomState((s) => s?.hostId);
   
   const mySessionId = room.sessionId;
   const isMe = player.sessionId === mySessionId;
