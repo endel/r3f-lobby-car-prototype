@@ -7,22 +7,28 @@ import { useRoom, useRoomState } from "./colyseus";
 import { VirtualJoystick, RespawnButton } from "./hooks/useInput";
 import { useCallback, useState } from "react";
 
+interface TouchInput {
+  pressed: boolean;
+  angle: number;
+  respawn: boolean;
+}
+
 // NOTE: This component expects `room` to always be available.
-// The parent AppLoader in main.jsx ensures this by only rendering App after connection.
+// The parent AppLoader in main.tsx ensures this by only rendering App after connection.
 function App() {
   const { room } = useRoom();
-  const [touchInput, setTouchInput] = useState({ pressed: false, angle: 0, respawn: false });
+  const [touchInput, setTouchInput] = useState<TouchInput>({ pressed: false, angle: 0, respawn: false });
   const gameState = useRoomState((s) => s?.gameState);
 
-  const handleJoystickInput = useCallback((input) => {
+  const handleJoystickInput = useCallback((input: TouchInput) => {
     setTouchInput(input);
-    room.send("input", input);
+    room!.send("input", input);
   }, [room]);
 
   const handleRespawn = useCallback(() => {
-    room.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: true });
+    room!.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: true });
     setTimeout(() => {
-      room.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: false });
+      room!.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: false });
     }, 100);
   }, [room, touchInput]);
 

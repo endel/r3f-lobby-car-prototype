@@ -5,7 +5,7 @@ import { CarController } from "./CarController";
 import { GameArea } from "./GameArea";
 
 export const Game = () => {
-  const players = useRoomState((s) => s?.players);
+  const players = useRoomState((s: any) => s?.players);
 
   return (
     <group>
@@ -16,7 +16,7 @@ export const Game = () => {
           form="rect"
           intensity={1}
           color="white"
-          scale={[10, 10]}
+          scale={[10, 10] as any}
           target={[0, 0, 0]}
         />
       </Environment>
@@ -35,7 +35,7 @@ export const Game = () => {
       />
       <directionalLight position={[10, 10, 10]} intensity={0.4} />
       <Physics>
-        {Object.values(players).map((player) => (
+        {Object.values(players).map((player: any) => (
           <CarController key={player.sessionId} player={player} />
         ))}
         <RigidBody type="fixed" colliders="hull" rotation-y={Math.PI}>

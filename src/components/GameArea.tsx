@@ -1,5 +1,5 @@
 import { Gltf, useGLTF } from "@react-three/drei";
-import { degToRad } from "three/src/math/MathUtils";
+import { degToRad } from "three/src/math/MathUtils.js";
 
 export const GameArea = () => {
   // const { scene } = useGLTF("/models/map_buildings.glb");

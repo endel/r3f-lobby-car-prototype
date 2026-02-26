@@ -9,11 +9,11 @@ export const UI = () => {
   const { room } = useRoom();
   const { setGameState, setCar, setName } = useGameActions();
 
-  const gameState = useRoomState((s) => s?.gameState) || "lobby";
-  const hostId = useRoomState((s) => s?.hostId);
-  const myPlayer = useRoomState((s) => s?.players?.get(room.sessionId));
+  const gameState = useRoomState((s: any) => s?.gameState) || "lobby";
+  const hostId = useRoomState((s: any) => s?.hostId);
+  const myPlayer = useRoomState((s: any) => s?.players?.get(room!.sessionId));
 
-  const isHost = hostId === room.sessionId;
+  const isHost = hostId === room!.sessionId;
 
   console.log("MY PLAYER:", myPlayer);
 

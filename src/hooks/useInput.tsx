@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
+interface JoystickInput {
+  pressed: boolean;
+  angle: number;
+  respawn: boolean;
+}
+
 // Virtual joystick component for touch input
-export const VirtualJoystick = ({ onInput }) => {
-  const joystickRef = useRef(null);
-  const knobRef = useRef(null);
+export const VirtualJoystick = ({ onInput }: { onInput: (input: JoystickInput) => void }) => {
+  const joystickRef = useRef<HTMLDivElement>(null);
+  const knobRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const centerRef = useRef({ x: 0, y: 0 });
   const maxDistance = 50;
 
-  const handleStart = useCallback((clientX, clientY) => {
+  const handleStart = useCallback((clientX: number, clientY: number) => {
     if (!joystickRef.current) return;
     const rect = joystickRef.current.getBoundingClientRect();
     centerRef.current = {
@@ -19,25 +25,25 @@ export const VirtualJoystick = ({ onInput }) => {
     handleMove(clientX, clientY);
   }, []);
 
-  const handleMove = useCallback((clientX, clientY) => {
+  const handleMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging && !centerRef.current.x) return;
-    
+
     const dx = clientX - centerRef.current.x;
     const dy = clientY - centerRef.current.y;
     const distance = Math.min(Math.sqrt(dx * dx + dy * dy), maxDistance);
     const angle = Math.atan2(dy, dx);
-    
+
     // Convert to game angle (0 = forward, PI/2 = right)
     // Original joystick: angle 0 = right, PI/2 = down
     // We want: angle 0 = forward (negative Y in screen space)
     const gameAngle = angle + Math.PI / 2;
-    
+
     if (knobRef.current) {
       const knobX = Math.cos(angle) * distance;
       const knobY = Math.sin(angle) * distance;
       knobRef.current.style.transform = `translate(${knobX}px, ${knobY}px)`;
     }
-    
+
     if (distance > 10) {
       onInput({
         pressed: true,
@@ -58,7 +64,7 @@ export const VirtualJoystick = ({ onInput }) => {
   }, [onInput]);
 
   useEffect(() => {
-    const onTouchMove = (e) => {
+    const onTouchMove = (e: TouchEvent) => {
       if (isDragging && e.touches.length > 0) {
         handleMove(e.touches[0].clientX, e.touches[0].clientY);
       }
@@ -66,7 +72,7 @@ export const VirtualJoystick = ({ onInput }) => {
     const onTouchEnd = () => {
       if (isDragging) handleEnd();
     };
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (isDragging) {
         handleMove(e.clientX, e.clientY);
       }
@@ -109,7 +115,7 @@ export const VirtualJoystick = ({ onInput }) => {
 };
 
 // Respawn button component
-export const RespawnButton = ({ onRespawn }) => {
+export const RespawnButton = ({ onRespawn }: { onRespawn: () => void }) => {
   return (
     <button
       className="fixed bottom-24 right-8 w-20 h-20 rounded-full bg-red-500 bg-opacity-70 backdrop-blur-sm text-white font-bold text-sm shadow-lg z-20 active:scale-95 transition-transform"
@@ -126,12 +132,12 @@ export const RespawnButton = ({ onRespawn }) => {
 
 // Hook for keyboard input
 export const useInput = (enabled = true) => {
-  const [input, setInput] = useState({
+  const [input, setInput] = useState<JoystickInput>({
     pressed: false,
     angle: 0,
     respawn: false,
   });
-  
+
   const keysPressed = useRef({
     forward: false,
     backward: false,
@@ -144,16 +150,16 @@ export const useInput = (enabled = true) => {
 
     const updateInput = () => {
       const { forward, backward, left, right } = keysPressed.current;
-      
+
       if (!forward && !backward && !left && !right) {
         setInput((prev) => ({ ...prev, pressed: false }));
         return;
       }
-      
+
       // Calculate angle based on keys
       // Forward = 0, Backward = PI, Left = PI*1.5, Right = PI*0.5
       let angle = 0;
-      
+
       if (forward && !backward) {
         if (left && !right) angle = Math.PI * 1.75; // Forward-left
         else if (right && !left) angle = Math.PI * 0.25; // Forward-right
@@ -167,11 +173,11 @@ export const useInput = (enabled = true) => {
       } else if (right && !left) {
         angle = Math.PI * 0.5; // Right
       }
-      
+
       setInput((prev) => ({ ...prev, pressed: true, angle }));
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.code) {
         case "KeyW":
         case "ArrowUp":
@@ -197,7 +203,7 @@ export const useInput = (enabled = true) => {
       updateInput();
     };
 
-    const handleKeyUp = (e) => {
+    const handleKeyUp = (e: KeyboardEvent) => {
       switch (e.code) {
         case "KeyW":
         case "ArrowUp":
@@ -232,15 +238,15 @@ export const useInput = (enabled = true) => {
 };
 
 // Combined input provider with UI
-export const InputControls = ({ onInput }) => {
-  const handleJoystickInput = useCallback((joystickInput) => {
+export const InputControls = ({ onInput }: { onInput: (input: JoystickInput) => void }) => {
+  const handleJoystickInput = useCallback((joystickInput: JoystickInput) => {
     onInput(joystickInput);
   }, [onInput]);
 
   const handleRespawn = useCallback(() => {
-    onInput((prev) => ({ ...prev, respawn: true }));
+    onInput({ pressed: false, angle: 0, respawn: true });
     setTimeout(() => {
-      onInput((prev) => ({ ...prev, respawn: false }));
+      onInput({ pressed: false, angle: 0, respawn: false });
     }, 100);
   }, [onInput]);
 

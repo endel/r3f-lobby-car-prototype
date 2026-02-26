@@ -18,7 +18,7 @@ function AppLoader() {
   if (error) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white text-2xl text-red-500">
-        Error: {error}
+        Error: {String(error)}
       </div>
     );
   }
@@ -35,7 +35,7 @@ function AppLoader() {
   return <App />;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <RoomProvider connect={() => client.joinOrCreate("game_room")}>
       <AppLoader />

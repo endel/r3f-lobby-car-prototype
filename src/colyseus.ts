@@ -2,6 +2,9 @@ import { Client } from "@colyseus/sdk";
 import { useCallback } from "react";
 import { createRoomContext } from "@colyseus/react";
 
+// import type { GameRoomState } from "../server/src/rooms/schema/GameRoomState";
+import type { GameRoom } from "../server/src/rooms/GameRoom";
+
 // Get server URL based on environment
 const getServerUrl = () => {
   if (import.meta.env.PROD) {
@@ -13,30 +16,30 @@ const getServerUrl = () => {
 
 export const client = new Client(getServerUrl());
 
-export const { RoomProvider, useRoom, useRoomState } = createRoomContext();
+export const { RoomProvider, useRoom, useRoomState, useRoomMessage } = createRoomContext<GameRoom>();
 
 // App-specific convenience hook for sending game messages.
 export function useGameActions() {
   const { room } = useRoom();
 
-  const setGameState = useCallback((gameState) => {
-    room.send("setGameState", gameState);
+  const setGameState = useCallback((gameState: string) => {
+    room!.send("setGameState", gameState);
   }, [room]);
 
-  const setCar = useCallback((car) => {
-    room.send("setCar", car);
+  const setCar = useCallback((car: string) => {
+    room!.send("setCar", car);
   }, [room]);
 
-  const setName = useCallback((name) => {
-    room.send("setName", name);
+  const setName = useCallback((name: string) => {
+    room!.send("setName", name);
   }, [room]);
 
-  const sendInput = useCallback((input) => {
-    room.send("input", input);
+  const sendInput = useCallback((input: { pressed: boolean; angle: number; respawn: boolean }) => {
+    room!.send("input", input);
   }, [room]);
 
-  const updatePosition = useCallback((sessionId, pos, rot) => {
-    room.send("updatePosition", {
+  const updatePosition = useCallback((sessionId: string, pos: { x: number; y: number; z: number }, rot: { x: number; y: number; z: number; w: number }) => {
+    room!.send("updatePosition", {
       sessionId,
       x: pos.x,
       y: pos.y,

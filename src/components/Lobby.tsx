@@ -12,7 +12,7 @@ import { useAtom } from "jotai";
 import { useRoom, useRoomState } from "../colyseus";
 import { useEffect, useRef, useState } from "react";
 import { MathUtils, Vector3 } from "three";
-import { degToRad } from "three/src/math/MathUtils";
+import { degToRad } from "three/src/math/MathUtils.js";
 import { audios, playAudio } from "../utils/AudioManager";
 import { Car } from "./Car";
 import { NameEditingAtom } from "./UI";
@@ -21,19 +21,19 @@ const CAR_SPACING = 2.5;
 
 export const Lobby = () => {
   const [nameEditing, setNameEditing] = useAtom(NameEditingAtom);
-  const controls = useRef();
-  const cameraReference = useRef();
+  const controls = useRef<any>(null);
+  const cameraReference = useRef<any>(null);
 
   const { room } = useRoom();
 
-  const players = useRoomState((s) => s.players);
+  const players = useRoomState((s: any) => s.players);
   const numPlayers = Object.keys(players).length;
 
-  const mySessionId = room.sessionId;
+  const mySessionId = room!.sessionId;
 
   const { scene } = useGLTF("/models/garage.glb");
   useEffect(() => {
-    scene.traverse((child) => {
+    scene.traverse((child: any) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
@@ -41,7 +41,7 @@ export const Lobby = () => {
     });
   }, [scene]);
 
-  const animatedLight = useRef();
+  const animatedLight = useRef<any>(null);
 
   useFrame(({ clock }) => {
     animatedLight.current.position.x =
@@ -100,6 +100,7 @@ export const Lobby = () => {
         touches={{
           one: 0,
           two: 0,
+          three: 0,
         }}
       />
       <directionalLight position={[6, 4, 6]} intensity={0.4} color="white" />
@@ -143,7 +144,7 @@ export const Lobby = () => {
             <meshBasicMaterial color="white" />
           </Box>
         </group>
-        {Object.values(players).map((player, idx) => (
+        {Object.values(players).map((player: any, idx: number) => (
           <group
             position-x={
               idx * CAR_SPACING - ((numPlayers - 1) * CAR_SPACING) / 2
@@ -225,11 +226,11 @@ export const Lobby = () => {
 
 const SWITCH_DURATION = 600;
 
-const CarSwitcher = ({ player }) => {
+const CarSwitcher = ({ player }: { player: any }) => {
   const changedCarAt = useRef(0);
-  const container = useRef();
+  const container = useRef<any>(null);
   const [carModel, setCurrentCarModel] = useState(player.car);
-  
+
   useFrame(() => {
     const timeSinceChange = Date.now() - changedCarAt.current;
     if (timeSinceChange < SWITCH_DURATION / 2) {
@@ -257,8 +258,8 @@ const CarSwitcher = ({ player }) => {
         0.1
       );
     }
-  }, []);
-  
+  });
+
   // Check if car changed
   const newCar = player.car;
   if (newCar !== carModel) {
@@ -268,7 +269,7 @@ const CarSwitcher = ({ player }) => {
       setCurrentCarModel(newCar);
     }, SWITCH_DURATION / 2);
   }
-  
+
   return (
     <group ref={container}>
       <Car model={carModel} />

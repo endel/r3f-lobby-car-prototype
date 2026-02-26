@@ -1,5 +1,5 @@
 import { Room, Client, CloseCode } from "colyseus";
-import { GameRoomState, Player } from "./schema/MyRoomState.js";
+import { GameRoomState, Player } from "./schema/GameRoomState.js";
 
 export class GameRoom extends Room {
   maxClients = 4;
