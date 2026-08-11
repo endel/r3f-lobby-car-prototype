@@ -12,7 +12,7 @@ import {
  */
 import { GameRoom } from "./rooms/GameRoom.js";
 
-const server = defineServer({
+export const server = defineServer({
     /**
      * Define your room handlers:
      */
@@ -52,9 +52,11 @@ const server = defineServer({
         /**
          * Use @colyseus/playground
          * (It is not recommended to expose this route in a production environment)
+         * Mounted at /playground — the root path serves the game client
+         * (Vite in dev, dist/client in production).
          */
         if (process.env.NODE_ENV !== "production") {
-            app.use("/", playground());
+            app.use("/playground", playground());
         }
     }
 
