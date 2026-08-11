@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useLatch } from "@colyseus/react";
+import { useInputBuffer } from "@colyseus/react";
 import { useRoom, useInput, useReconciler, usePredictLoop } from "../colyseus";
 import { applyCarInput, type CarBody } from "../../server/src/shared/carSim";
 import { carControls, setCarControls, consumeRespawn, angleFromKeys } from "../controls";
@@ -14,12 +14,12 @@ import { carControls, setCarControls, consumeRespawn, angleFromKeys } from "../c
  *   frame loop at priority -1, so ticks + sends happen before any component
  *   reads render values ("send before you read").
  * - Keyboard is sampled into `carControls` (held state, live) and the
- *   respawn tap goes through a latch so it lands on exactly one fixed step.
+ *   respawn tap is buffered so it lands on exactly one fixed step.
  */
 export const CarDriver = () => {
   const { room } = useRoom();
   const input = useInput();
-  const respawn = useLatch();
+  const respawn = useInputBuffer();
 
   useReconciler(
     (state, r) => state.players.get(r.sessionId),
@@ -56,7 +56,7 @@ export const CarDriver = () => {
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space") {
-        respawn.latch();
+        respawn.press();
         return;
       }
       if (update(e.code, true)) {

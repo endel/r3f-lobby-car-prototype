@@ -3,7 +3,7 @@
  * keyboard), consumed once per fixed step by the CarDriver's send loop.
  *
  * Held state (joystick direction) is sampled live; edge state (respawn tap)
- * is queued and consumed on exactly one step — the "latch, then consume"
+ * is buffered and consumed on exactly one step — the "buffer, then consume"
  * recipe: https://docs.colyseus.io/netcode/recipes
  */
 
