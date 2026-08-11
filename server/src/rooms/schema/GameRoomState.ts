@@ -5,21 +5,19 @@ export class Player extends Schema {
   @type("string") name: string = "";
   @type("string") car: string = "sedanSports";
 
-  // Position
+  // Pose — advanced by the shared deterministic sim (carSim.ts)
   @type("number") x: number = 0;
-  @type("number") y: number = 2;
+  @type("number") y: number = 0;
   @type("number") z: number = 0;
+  @type("number") heading: number = 0;
 
-  // Rotation (quaternion)
-  @type("number") rotX: number = 0;
-  @type("number") rotY: number = 0;
-  @type("number") rotZ: number = 0;
-  @type("number") rotW: number = 1;
+  // Velocity — part of the sim state so prediction replays bit-identically
+  @type("number") vx: number = 0;
+  @type("number") vy: number = 0;
+  @type("number") vz: number = 0;
 
-  // Input state (for non-host clients to broadcast their input)
-  @type("boolean") joystickPressed: boolean = false;
-  @type("number") joystickAngle: number = 0;
-  @type("boolean") respawnPressed: boolean = false;
+  // Deterministic respawn slot (assigned at join)
+  @type("uint8") spawnIdx: number = 0;
 }
 
 export class GameRoomState extends Schema {

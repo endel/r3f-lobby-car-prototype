@@ -1,9 +1,26 @@
 import { Room, Client, CloseCode } from "colyseus";
 import { GameRoomState, Player } from "./schema/GameRoomState.js";
+import { CarInput } from "../shared/CarInput.js";
+import { applyCarInput, respawn, TICK_RATE } from "../shared/carSim.js";
 
-export class GameRoom extends Room {
+export class GameRoom extends Room<{ state: GameRoomState, input: CarInput }> {
   maxClients = 4;
   state = new GameRoomState();
+
+  // Per-client input schema, buffered per session. Also powers the client's
+  // clock-sync and lets `room.input()` resolve the schema without a
+  // client-side constructor.
+  inputs = this.defineInput(CarInput, {
+    bufferMaxSize: 64,
+    sanitize: {
+      angle: [0, Math.PI * 2],   // NaN-safe clamp — never trust the wire
+    },
+    // No idle policy: server steps stay 1:1 with client inputs (the replay
+    // invariant behind prediction). Predicting clients send every tick —
+    // an unchanged frame is a body-less packet — so drag still integrates.
+  });
+
+  spawnCounter = 0;
 
   messages = {
     setCar: (client: Client, car: string) => {
@@ -24,54 +41,35 @@ export class GameRoom extends Room {
         this.state.gameState = gameState;
       }
     },
-    input: (client: Client, input: { pressed: boolean; angle: number; respawn: boolean }) => {
-      const player = this.state.players.get(client.sessionId);
-      if (player) {
-        player.joystickPressed = input.pressed;
-        player.joystickAngle = input.angle;
-        player.respawnPressed = input.respawn;
-      }
-    },
-    updatePosition: (client: Client, data: {
-      sessionId: string;
-      x: number;
-      y: number;
-      z: number;
-      rotX: number;
-      rotY: number;
-      rotZ: number;
-      rotW: number;
-    }) => {
-      const player = this.state.players.get(data.sessionId);
-      if (player) {
-        player.x = data.x;
-        player.y = data.y;
-        player.z = data.z;
-        player.rotX = data.rotX;
-        player.rotY = data.rotY;
-        player.rotZ = data.rotZ;
-        player.rotW = data.rotW;
-      }
-    },
   }
 
   onCreate(options: any) {
     console.log("GameRoom created!");
+
+    // Fixed-step authoritative simulation — the rate is advertised to
+    // predicting clients through the join handshake.
+    this.setFixedTimestep((ctx) => this.step(ctx), TICK_RATE);
+  }
+
+  step(ctx: { dt: number }) {
+    for (const [sessionId, player] of this.state.players) {
+      // One entity per client, independent sims → iterate consumption style:
+      // each buffered input advances this car by one fixed step.
+      for (const cmd of this.inputs.get(sessionId)) {
+        applyCarInput(player, cmd, ctx.dt);
+      }
+    }
   }
 
   onJoin(client: Client, options: any) {
     console.log(client.sessionId, "joined!");
 
-    // Create new player
     const player = new Player();
     player.sessionId = client.sessionId;
     player.name = options.name || "";
     player.car = "sedanSports";
-
-    // Set initial position with some randomness
-    player.x = (Math.random() - 0.5) * 8;
-    player.y = 2;
-    player.z = (Math.random() - 0.5) * 8;
+    player.spawnIdx = this.spawnCounter++ % 9;
+    respawn(player);
 
     this.state.players.set(client.sessionId, player);
 
