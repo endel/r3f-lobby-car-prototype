@@ -1,10 +1,8 @@
 import {
-  Billboard,
   Box,
   CameraControls,
-  Image,
+  Html,
   PerspectiveCamera,
-  Text,
   useGLTF,
 } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -152,42 +150,22 @@ export const Lobby = () => {
             key={player.sessionId}
             scale={0.8}
           >
-            <Billboard position-y={2.1} position-x={0.5}>
-              <Text fontSize={0.34} anchorX={"right"}>
-                {player.name || "Player"}
-                <meshBasicMaterial color="white" />
-              </Text>
-              <Text
-                fontSize={0.34}
-                anchorX={"right"}
-                position-x={0.02}
-                position-y={-0.02}
-                position-z={-0.01}
-              >
-                {player.name || "Player"}
-                <meshBasicMaterial color="black" transparent opacity={0.8} />
-              </Text>
-              {player.sessionId === mySessionId && (
-                <>
-                  <Image
+            {/* HTML labels (same idiom as the in-game name tags) — drei's
+                <Text> relies on troika's WebGL1 SDF atlas, which breaks on
+                browsers without ANGLE_instanced_arrays on WebGL1 contexts. */}
+            <Html position-y={2.1} center zIndexRange={[10, 0]}>
+              <div className="flex items-center gap-2 whitespace-nowrap text-white drop-shadow-md backdrop-filter bg-slate-300 bg-opacity-30 backdrop-blur-lg rounded-md py-1 px-3 text-2xl select-none">
+                <span>{player.name || "Player"}</span>
+                {player.sessionId === mySessionId && (
+                  <img
+                    src="images/edit.png"
+                    alt="Edit name"
+                    className="w-6 h-6 cursor-pointer"
                     onClick={() => setNameEditing(true)}
-                    position-x={0.2}
-                    scale={0.3}
-                    url="images/edit.png"
-                    transparent
                   />
-                  <Image
-                    position-x={0.2 + 0.02}
-                    position-y={-0.02}
-                    position-z={-0.01}
-                    scale={0.3}
-                    url="images/edit.png"
-                    transparent
-                    color="black"
-                  />
-                </>
-              )}
-            </Billboard>
+                )}
+              </div>
+            </Html>
             <group position-y={player.sessionId === mySessionId ? 0.15 : 0}>
               <CarSwitcher player={player} />
             </group>
