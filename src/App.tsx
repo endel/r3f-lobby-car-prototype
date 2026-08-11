@@ -3,9 +3,10 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { Leva } from "leva";
 import { Experience } from "./components/Experience";
 import { UI } from "./components/UI";
-import { useRoom, useRoomState } from "./colyseus";
-import { VirtualJoystick, RespawnButton } from "./hooks/useInput";
-import { useCallback, useState } from "react";
+import { useRoomState } from "./colyseus";
+import { VirtualJoystick, RespawnButton } from "./components/TouchControls";
+import { setCarControls, queueRespawn } from "./controls";
+import { useCallback } from "react";
 
 interface TouchInput {
   pressed: boolean;
@@ -16,21 +17,17 @@ interface TouchInput {
 // NOTE: This component expects `room` to always be available.
 // The parent AppLoader in main.tsx ensures this by only rendering App after connection.
 function App() {
-  const { room } = useRoom();
-  const [touchInput, setTouchInput] = useState<TouchInput>({ pressed: false, angle: 0, respawn: false });
   const gameState = useRoomState((s) => s?.gameState);
 
+  // Touch input only STAGES controls — the CarDriver's fixed-step send loop
+  // is the single thing that transmits input (one send per predicted step).
   const handleJoystickInput = useCallback((input: TouchInput) => {
-    setTouchInput(input);
-    room!.send("input", input);
-  }, [room]);
+    setCarControls(input.pressed, input.angle);
+  }, []);
 
   const handleRespawn = useCallback(() => {
-    room!.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: true });
-    setTimeout(() => {
-      room!.send("input", { pressed: touchInput.pressed, angle: touchInput.angle, respawn: false });
-    }, 100);
-  }, [room, touchInput]);
+    queueRespawn();
+  }, []);
 
   // Check if touch device
   const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);

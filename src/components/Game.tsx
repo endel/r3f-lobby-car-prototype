@@ -1,11 +1,17 @@
 import { Environment, Gltf, Lightformer } from "@react-three/drei";
-import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
-import { useRoomState } from "../colyseus";
+import { useRoomState, useAttachAll } from "../colyseus";
 import { CarController } from "./CarController";
+import { CarDriver } from "./CarDriver";
 import { GameArea } from "./GameArea";
 
 export const Game = () => {
   const players = useRoomState((s: any) => s?.players);
+
+  // Passive smoothing for every player: linear fields and the angular
+  // heading in separate attaches (shortest-arc interpolation for radians).
+  // Our own car's reconciler takes over its slots while it lives.
+  useAttachAll("players", { mode: "lerp", fields: ["x", "y", "z"] });
+  useAttachAll("players", { mode: "lerp", fields: ["heading"], angle: true });
 
   return (
     <group>
@@ -34,24 +40,14 @@ export const Game = () => {
         color="blue"
       />
       <directionalLight position={[10, 10, 10]} intensity={0.4} />
-      <Physics>
-        {Object.values(players).map((player: any) => (
-          <CarController key={player.sessionId} player={player} />
-        ))}
-        <RigidBody type="fixed" colliders="hull" rotation-y={Math.PI}>
-          <GameArea />
-        </RigidBody>
-        <RigidBody
-          type="fixed"
-          sensor
-          colliders={false}
-          position-y={-5}
-          name="void"
-        >
-          <CuboidCollider args={[20, 3, 20]} />
-        </RigidBody>
-        <Gltf src="/models/map_road.glb" />
-      </Physics>
+
+      <CarDriver />
+      {Object.values(players ?? {}).map((player: any) => (
+        <CarController key={player.sessionId} player={player} />
+      ))}
+
+      <GameArea />
+      <Gltf src="/models/map_road.glb" />
     </group>
   );
 };

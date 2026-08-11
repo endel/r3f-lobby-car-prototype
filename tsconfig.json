@@ -5,6 +5,16 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    // the client type-imports server room files, whose schema uses decorators
+    "experimentalDecorators": true,
+    // @colyseus/react is a file: link with its own node_modules — force a
+    // single copy of the colyseus types (runtime is deduped by Vite)
+    "paths": {
+      "@colyseus/sdk": ["./node_modules/@colyseus/sdk/build/index.d.ts"],
+      "@colyseus/sdk/*": ["./node_modules/@colyseus/sdk/build/*.d.ts"],
+      "@colyseus/schema": ["./node_modules/@colyseus/schema/build/index.d.ts"],
+      "@colyseus/shared-types": ["./node_modules/@colyseus/shared-types/build/index.d.ts"]
+    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",
