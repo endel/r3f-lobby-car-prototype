@@ -46,7 +46,11 @@ export const Game = () => {
         <CarController key={player.sessionId} player={player} />
       ))}
 
-      <GameArea />
+      {/* same π flip the original applied — the baked collision AABBs in
+          carSim.ts assume this orientation */}
+      <group rotation-y={Math.PI}>
+        <GameArea />
+      </group>
       <Gltf src="/models/map_road.glb" />
     </group>
   );

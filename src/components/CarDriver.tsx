@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useLatch } from "@colyseus/react";
-import { useInput, useReconciler, usePredictLoop } from "../colyseus";
-import { applyCarInput } from "../../server/src/shared/carSim";
+import { useRoom, useInput, useReconciler, usePredictLoop } from "../colyseus";
+import { applyCarInput, type CarBody } from "../../server/src/shared/carSim";
 import { carControls, setCarControls, consumeRespawn, angleFromKeys } from "../controls";
 
 /**
@@ -17,13 +17,26 @@ import { carControls, setCarControls, consumeRespawn, angleFromKeys } from "../c
  *   respawn tap goes through a latch so it lands on exactly one fixed step.
  */
 export const CarDriver = () => {
+  const { room } = useRoom();
   const input = useInput();
   const respawn = useLatch();
 
   useReconciler(
-    (state, room) => state.players.get(room.sessionId),
+    (state, r) => state.players.get(r.sessionId),
     {
-      step: (ctx, player, cmd) => applyCarInput(player, cmd, ctx.dt),
+      step: (ctx, player, cmd) => {
+        // Other cars for collision: latest decoded positions — the client's
+        // best estimate of what the server collides against. Contact with a
+        // moving car may reconcile; smoothing absorbs it.
+        const others: CarBody[] = [];
+        const players = room?.state.players;
+        if (players) {
+          for (const [sid, other] of players) {
+            if (sid !== room!.sessionId) others.push(other);
+          }
+        }
+        applyCarInput(player, cmd, ctx.dt, others);
+      },
       smoothing: 15,
       snap: 5,   // respawn-sized corrections pop instead of gliding
     },

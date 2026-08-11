@@ -53,10 +53,16 @@ export class GameRoom extends Room<{ state: GameRoomState, input: CarInput }> {
 
   step(ctx: { dt: number }) {
     for (const [sessionId, player] of this.state.players) {
+      // Other cars for circle-vs-circle collision (resolved sequentially,
+      // against already-advanced earlier players — arcade-fine).
+      const others: Player[] = [];
+      for (const [sid, other] of this.state.players) {
+        if (sid !== sessionId) others.push(other);
+      }
       // One entity per client, independent sims → iterate consumption style:
       // each buffered input advances this car by one fixed step.
       for (const cmd of this.inputs.get(sessionId)) {
-        applyCarInput(player, cmd, ctx.dt);
+        applyCarInput(player, cmd, ctx.dt, others);
       }
     }
   }
