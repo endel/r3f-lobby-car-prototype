@@ -37,7 +37,7 @@ export const CarDriver = () => {
         }
         applyCarInput(player, cmd, ctx.dt, others);
       },
-      smoothing: 15,
+      smoothMs: 65,
       snap: 5,   // respawn-sized corrections pop instead of gliding
     },
   );
